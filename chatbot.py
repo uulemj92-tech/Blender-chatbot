@@ -10,6 +10,7 @@ PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 LANDING_PAGE_URL = "https://blender-store.netlify.app"
+SHEET_URL = "https://script.google.com/macros/s/AKfycbz1mun7kRdj7PWLYtwqFaJv8BIp6tCYFn_l04yBRF7tDc179oTy-0cp_8kZ5P3iwYZN/exec"
 
 conversation_history = {}
 MAX_HISTORY = 8
@@ -97,6 +98,29 @@ def send_message(recipient_id, text):
         json={"recipient": {"id": recipient_id}, "message": {"text": text}}
     )
 
+def save_payment_to_sheet(user_name, sender_id, image_url):
+    """Төлбөрийн баримтыг Google Sheets-т хадгалах"""
+    try:
+        from datetime import datetime
+        data = {
+            "төрөл": "Төлбөрийн баримт",
+            "нэр": user_name or sender_id,
+            "утас": "",
+            "хаяг": "",
+            "өнгө": "",
+            "зураг_url": image_url,
+            "огноо": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        requests.post(
+            SHEET_URL,
+            headers={"Content-Type": "text/plain"},
+            data=__import__('json').dumps(data, ensure_ascii=False),
+            timeout=10
+        )
+        print(f">>> [SHEET] Төлбөрийн баримт хадгаллаа: {user_name}")
+    except Exception as e:
+        print(f">>> [SHEET ERROR] {e}")
+
 def send_url_button(recipient_id, text, url):
     requests.post(
         "https://graph.facebook.com/v18.0/me/messages",
@@ -138,6 +162,20 @@ def webhook():
             if 'message' in msg:
                 sender_id = msg['sender']['id']
                 user_text = msg['message'].get('text', '')
+
+                # ── Зураг (төлбөрийн баримт) ирвэл → Sheets-т хадгалах ──
+                attachments = msg['message'].get('attachments', [])
+                for att in attachments:
+                    if att.get('type') == 'image':
+                        image_url = att.get('payload', {}).get('url', '')
+                        user_name = get_user_name(sender_id)
+                        print(f">>> [IMAGE] {user_name} зураг илгээлээ")
+                        save_payment_to_sheet(user_name, sender_id, image_url)
+                        send_message(sender_id,
+                            f"✅ Баримт хүлээн авлаа{(' ' + user_name + '!') if user_name else '!'}\n\n"
+                            "Бид шалгаад 24 цагт хүргэлтийн мэдээлэл явуулна 🚀\n"
+                            "Асуух зүйл байвал: 📞 88920304"
+                        )
 
                 if not user_text:
                     continue
