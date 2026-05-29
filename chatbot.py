@@ -282,9 +282,6 @@ UPSELL:
             history.append({"role": "assistant", "content": reply})
             conversation_history[sender_id] = history[-MAX_HISTORY:]
 
-            # Утасны дугаар байвал захиалга хадгалах
-            save_order_to_sheet(sender_id, user_name, history)
-
             send_message(sender_id, reply)
 
     return 'OK'
