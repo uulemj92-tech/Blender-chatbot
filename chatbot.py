@@ -14,7 +14,7 @@ PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
 groq_client     = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 LANDING_PAGE_URL = "https://blender-store.netlify.app"
-SHEET_URL = "https://script.google.com/macros/s/AKfycbxXNph0oxL-VQCJXDGXALGvduzJVpMeDqBqDg2bxWruqYYCyQL7uLogBMWuw6dJFz0j/exec"
+SHEET_URL = "https://script.google.com/macros/s/AKfyczbvJpDlAnoGM4wgN0MFKuJtjFm3Hj3bBtRb0qXoOUggPLjFxeXShJ_sypyB0I5No16/exec"
 
 conversation_history = {}   # {sender_id: [{role, content}]}
 saved_orders         = set() # захиалга хадгалсан sender_id-ууд
