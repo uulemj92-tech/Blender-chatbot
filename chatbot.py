@@ -162,7 +162,7 @@ def send_message(recipient_id, text):
         params={"access_token": PAGE_ACCESS_TOKEN},
         json={"recipient": {"id": recipient_id}, "message": {"text": text}})
 
-def send_url_button(recipient_id, text, url):
+def send_url_button(recipient_id, text, url, sender_id=None):
     requests.post(
         "https://graph.facebook.com/v18.0/me/messages",
         params={"access_token": PAGE_ACCESS_TOKEN},
@@ -174,7 +174,9 @@ def send_url_button(recipient_id, text, url):
                     "payload": {
                         "template_type": "button",
                         "text": text,
-                        "buttons": [{"type": "web_url", "url": url, "title": "📸 Зураг үзэх & Захиалах"}]
+                        "buttons": [{"type": "web_url",
+                                     "url": f"{url}?uid={sender_id}" if sender_id else url,
+                                     "title": "📸 Зураг үзэх & Захиалах"}]
                     }
                 }
             }
@@ -225,13 +227,13 @@ def webhook():
             if wants_payment:
                 send_message(sender_id, PAYMENT_REPLY)
                 send_url_button(sender_id,
-                    "👇 Бүтээгдэхүүний зураг, дэлгэрэнгүй мэдээлэл:", LANDING_PAGE_URL)
+                    "👇 Бүтээгдэхүүний зураг, дэлгэрэнгүй мэдээлэл:", LANDING_PAGE_URL, sender_id)
                 continue
 
             # ── Зураг хүсэх ──
             if wants_image:
                 send_url_button(sender_id,
-                    "👇 Бүтээгдэхүүний зураг, дэлгэрэнгүй мэдээлэл:", LANDING_PAGE_URL)
+                    "👇 Бүтээгдэхүүний зураг, дэлгэрэнгүй мэдээлэл:", LANDING_PAGE_URL, sender_id)
                 continue
 
             # ── AI хариулт ──
