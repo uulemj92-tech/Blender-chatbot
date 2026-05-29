@@ -103,12 +103,12 @@ def save_payment_to_sheet(user_name, sender_id, image_url):
     try:
         import json
         from datetime import datetime
-        # Одоо байгаа script-тэй нийцэх формат — нэр/утас/хаяг/өнгө/огноо
+        # Landing page-тэй ЯВАН ТААРАХ key нэрс: name, phone, addr, color, огноо
         data = {
-            "нэр": user_name or "Messenger хэрэглэгч",
-            "утас": "📸 ТӨЛБӨРИЙН БАРИМТ",
-            "хаяг": image_url,          # зургийн URL → хаяг баганад
-            "өнгө": "Зураг илгээсэн",
+            "name":  user_name or "Messenger хэрэглэгч",
+            "phone": "📸 ТӨЛБӨРИЙН БАРИМТ",
+            "addr":  image_url,          # зургийн URL → addr баганад
+            "color": "Зураг илгээсэн",
             "огноо": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         requests.post(
