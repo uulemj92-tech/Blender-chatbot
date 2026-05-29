@@ -4,7 +4,8 @@ import requests
 import os
 import re
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+MN_TZ = timezone(timedelta(hours=8))
 
 app = Flask(__name__)
 
@@ -114,7 +115,7 @@ def save_order_to_sheet(sender_id, user_name, history):
         "addr":      addr,
         "color":     color,
         "sender_id": sender_id,
-        "огноо":     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "огноо":     datetime.now(MN_TZ).strftime("%Y.%m.%d %H:%M:%S"),
     }
     try:
         requests.post(SHEET_URL,
@@ -135,7 +136,7 @@ def save_payment_to_sheet(user_name, sender_id, image_url):
             "name":      user_name or "Messenger хэрэглэгч",
             "sender_id": sender_id,
             "image_url": image_url,
-            "огноо":     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "огноо":     datetime.now(MN_TZ).strftime("%Y.%m.%d %H:%M:%S"),
         }
         requests.post(SHEET_URL,
             headers={"Content-Type": "text/plain"},
