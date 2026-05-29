@@ -11,9 +11,33 @@ groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 LANDING_PAGE_URL = "https://blender-store.netlify.app"
 
-# Яриа түүх хадгалах (сервер унтахаас өмнөх хугацаанд)
-conversation_history = {}  # {sender_id: [{"role": ..., "content": ...}, ...]}
-MAX_HISTORY = 8  # Хамгийн сүүлийн 8 мессеж хадгална
+conversation_history = {}
+MAX_HISTORY = 8
+
+# ========== KEYWORD SETS ==========
+
+PAYMENT_KEYWORDS = [
+    'данс', 'дансны', 'дансруу', 'шилжүүлэх', 'шилжүүл', 'төлбөр', 'төлөх', 'төл',
+    'мөнгө', 'хаан', 'qpay', 'socialpay', 'monpay', 'захиалах', 'захиалъя',
+    'захиалъ', 'яаж авах', 'хэрхэн авах', 'авахад', 'авч болох', 'авмаар',
+    'худалдаж', 'payment', 'bank', 'pay', 'order', 'захиал'
+]
+
+IMAGE_KEYWORDS = [
+    'зураг', 'фото', 'харах', 'үзэх', 'харуул', 'илгээ', 'photo', 'image', 'дэлгэрэнгүй'
+]
+
+PAYMENT_REPLY = """💳 Захиалгын алхам:
+
+1️⃣ Нэр, утас, хаяг, өнгө (Ягаан🩷 / Цагаан🤍) хэлнэ үү
+
+2️⃣ 79,900₮-г доорх дансанд шилжүүлнэ:
+🏦 Хаан банк: 5057496119
+(QPay / SocialPay / MonPay-р ч болно)
+
+3️⃣ Гүйлгээний screenshot энд илгээнэ
+
+4️⃣ 24 цагт хүргэлт зохицуулна 🚀"""
 
 # ========== FACEBOOK FUNCTIONS ==========
 
@@ -80,57 +104,56 @@ def webhook():
                     continue
 
                 user_name = get_user_name(sender_id)
+                text_lower = user_text.lower()
                 print(f">>> [{user_name}]: {user_text}")
 
-                # Яриа түүх авах
-                history = conversation_history.get(sender_id, [])
+                wants_image = any(kw in text_lower for kw in IMAGE_KEYWORDS)
+                wants_payment = any(kw in text_lower for kw in PAYMENT_KEYWORDS)
 
-                # Зураг/мэдээлэл хүссэн эсэх
-                image_keywords = ['зураг', 'фото', 'харах', 'үзэх', 'харуул', 'илгээ', 'photo', 'image', 'дэлгэрэнгүй']
-                wants_image = any(kw in user_text.lower() for kw in image_keywords)
+                # Захиалга / данс асуувал — шууд тогтмол хариулт илгээх
+                if wants_payment:
+                    print(">>> [PAYMENT TRIGGER] Захиалгын мэдээлэл илгээж байна")
+                    send_message(sender_id, PAYMENT_REPLY)
+                    if wants_image:
+                        send_url_button(
+                            sender_id,
+                            "👇 Бүтээгдэхүүний зураг болон дэлгэрэнгүй мэдээлэл:",
+                            LANDING_PAGE_URL
+                        )
+                    continue
+
+                # Бусад асуултад AI хариулна
+                history = conversation_history.get(sender_id, [])
 
                 system_prompt = f"""Чи Flexdeal дэлгүүрийн харилцагч үйлчилгээний AI туслах юм.
 Хэрэглэгчийн нэр: {user_name if user_name else 'танхим'}
 
-ЧУХАЛ ДҮРЭМ:
+ДҮРЭМ:
 - Зөвхөн МОНГОЛ хэлээр хариул
-- 2-3 өгүүлбэрээс хэтрэхгүй, ТОВЧ байх
-- Дахин дахин мэндлэхгүй — зөвхөн хэрэглэгч АНХНЫ мессеж илгээхэд нэг л удаа "{user_name}-д сайн байна уу 👋" гэж мэндэл, дараагийн мессежүүдэд огт мэндлэхгүй
-- Яриа түүхийг анхаарч, өмнө ямар зүйл ярьснаа санаж байх
-- Мэдэхгүй зүйлд "Манай менежер танд тусална 🙏" гэж хариул
+- 2-3 өгүүлбэрт багтааж ТОВЧ хариул
+- Зөвхөн анхны мессежид нэр дурдаж мэндэл, дараа нь давтахгүй
+- Өмнөх яриаг санаж, уялдаатай хариул
 
 🛍️ БҮТЭЭГДЭХҮҮН:
-Нэр: Fresh Juice Mini Portable Blender
-💰 Үнэ: 79,900₮ (анхны үнэ 120,000₮-с 33% хямдарсан!)
-📦 Багтаамж: 350мл | 🎨 Өнгө: Ягаан 🩷, Цагаан 🤍
-🔥 Зөвхөн 5 ширхэг үлдсэн! ⭐ 4.9/5 үнэлгээ
+Fresh Juice Mini Portable Blender
+💰 79,900₮ (120,000₮-с 33% хямдарсан) | 📦 350мл
+🎨 Ягаан🩷, Цагаан🤍 | ⭐ 4.9/5 | 🔥 5 ширхэг үлдсэн
 
 ⚡ ОНЦЛОГ:
-- 30 секундэд шинэхэн жүүс, smoothie
-- USB цэнэглэлт — powerbank, утаснаас
-- Жижиг, хөнгөн — ажил, дасгал, аялалд
-
-💳 ЗАХИАЛГЫН АЛХАМ — данс асуувал ЗААВАЛ энийг хэл:
-1️⃣ Нэр, утас, хаяг, өнгө хэлнэ үү
-2️⃣ 79,900₮-г ХААН БАНК руу шилжүүлнэ:
-   👉 Дансны дугаар: 5057496119
-   (QPay / SocialPay / MonPay-р ч болно)
-3️⃣ Гүйлгээний screenshot Messenger-т илгээнэ
-4️⃣ 24 цагт хүргэлт зохицуулна
+- 30 секундэд жүүс, smoothie
+- USB цэнэглэлт (powerbank-аас ч болно)
+- Жижиг, хөнгөн — ажил, дасгал, аялалд тохиромжтой
 
 ⭐ СЭТГЭГДЭЛ:
-- Болормаа: "Маш хурдан ирсэн, өглөө бүр smoothie хийж байна!"
+- Болормаа: "Өглөө бүр smoothie хийж байна, маш хурдан ирсэн!"
 - Энхбаяр: "Жижигхэн ч гэсэн маш хүчтэй!"
 
 💡 UPSELL:
 - Ягаан авна → "Цагаан өнгө ч бий 😊"
 - Нэг авна → "Найздаа бэлэг болгоод 2 авбал?"
-- Үнэ асуувал → "120,000₮-с 79,900₮ — 33% хэмнэлт! 🔥" """
+- Үнэ асуувал → "33% хэмнэлт — 120,000₮-с 79,900₮ 🔥" """
 
-                # Яриа түүхэд хэрэглэгчийн мессеж нэмэх
                 history.append({"role": "user", "content": user_text})
-
-                # AI-д илгээх мессежийн жагсаалт
                 messages = [{"role": "system", "content": system_prompt}] + history[-MAX_HISTORY:]
 
                 response = groq_client.chat.completions.create(
@@ -141,10 +164,7 @@ def webhook():
                 reply = response.choices[0].message.content
                 print(f">>> AI хариу: {reply}")
 
-                # Яриа түүхэд AI хариу нэмэх
                 history.append({"role": "assistant", "content": reply})
-
-                # Хамгийн сүүлийн MAX_HISTORY мессежийг л хадгална
                 conversation_history[sender_id] = history[-MAX_HISTORY:]
 
                 send_message(sender_id, reply)
@@ -152,7 +172,7 @@ def webhook():
                 if wants_image:
                     send_url_button(
                         sender_id,
-                        "👇 Бүтээгдэхүүний дэлгэрэнгүй мэдээлэл, зураг болон захиалгын хуудас:",
+                        "👇 Бүтээгдэхүүний зураг болон дэлгэрэнгүй мэдээлэл:",
                         LANDING_PAGE_URL
                     )
 
