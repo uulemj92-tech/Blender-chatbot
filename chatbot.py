@@ -10,7 +10,7 @@ PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 LANDING_PAGE_URL = "https://blender-store.netlify.app"
-SHEET_URL = "https://script.google.com/macros/s/AKfycbz1mun7kRdj7PWLYtwqFaJv8BIp6tCYFn_l04yBRF7tDc179oTy-0cp_8kZ5P3iwYZN/exec"
+SHEET_URL = "https://script.google.com/macros/s/AKfycbz-FfwhuwP7ng5lgstP66sdVe4SmZHalQ7uwIEzjSA23286-WO3xy1pxkXSA_1X_jE/exec"
 
 conversation_history = {}
 MAX_HISTORY = 8
