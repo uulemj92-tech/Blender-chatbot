@@ -9,16 +9,15 @@ VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN")
 PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# 🔗 Landing page URL - Netlify дээр байрлуулсны дараа энд оруул
 LANDING_PAGE_URL = "https://blender-store.netlify.app"
 
-# Анхны мессеж хадгалах (нэрээр мэндлэхэд ашиглана)
-greeted_users = set()
+# Яриа түүх хадгалах (сервер унтахаас өмнөх хугацаанд)
+conversation_history = {}  # {sender_id: [{"role": ..., "content": ...}, ...]}
+MAX_HISTORY = 8  # Хамгийн сүүлийн 8 мессеж хадгална
 
 # ========== FACEBOOK FUNCTIONS ==========
 
 def get_user_name(sender_id):
-    """Facebook-аас хэрэглэгчийн нэр авах"""
     try:
         res = requests.get(
             f"https://graph.facebook.com/{sender_id}",
@@ -29,7 +28,6 @@ def get_user_name(sender_id):
         return ''
 
 def send_message(recipient_id, text):
-    """Энгийн мессеж илгээх"""
     requests.post(
         "https://graph.facebook.com/v18.0/me/messages",
         params={"access_token": PAGE_ACCESS_TOKEN},
@@ -37,7 +35,6 @@ def send_message(recipient_id, text):
     )
 
 def send_url_button(recipient_id, text, url):
-    """Товчтой мессеж илгээх — зураг, захиалах"""
     requests.post(
         "https://graph.facebook.com/v18.0/me/messages",
         params={"access_token": PAGE_ACCESS_TOKEN},
@@ -82,77 +79,76 @@ def webhook():
                 if not user_text:
                     continue
 
-                # Хэрэглэгчийн нэр авах
                 user_name = get_user_name(sender_id)
-                is_first = sender_id not in greeted_users
-                if is_first:
-                    greeted_users.add(sender_id)
-
                 print(f">>> [{user_name}]: {user_text}")
+
+                # Яриа түүх авах
+                history = conversation_history.get(sender_id, [])
 
                 # Зураг/мэдээлэл хүссэн эсэх
                 image_keywords = ['зураг', 'фото', 'харах', 'үзэх', 'харуул', 'илгээ', 'photo', 'image', 'дэлгэрэнгүй']
                 wants_image = any(kw in user_text.lower() for kw in image_keywords)
 
-                # System prompt
                 system_prompt = f"""Чи Flexdeal дэлгүүрийн харилцагч үйлчилгээний AI туслах юм.
 Хэрэглэгчийн нэр: {user_name if user_name else 'танхим'}
 
-{"⚡ АНХААР: Энэ хэрэглэгч АНХНЫ удаа мессеж илгээж байна. Заавал '" + user_name + "' гэж нэрээр мэндлэж, Flexdeal-д тавтай морилно уу гэж хариул!" if is_first else ""}
+ЧУХАЛ ДҮРЭМ:
+- Зөвхөн МОНГОЛ хэлээр хариул
+- 2-3 өгүүлбэрээс хэтрэхгүй, ТОВЧ байх
+- Дахин дахин мэндлэхгүй — зөвхөн хэрэглэгч АНХНЫ мессеж илгээхэд нэг л удаа "{user_name}-д сайн байна уу 👋" гэж мэндэл, дараагийн мессежүүдэд огт мэндлэхгүй
+- Яриа түүхийг анхаарч, өмнө ямар зүйл ярьснаа санаж байх
+- Мэдэхгүй зүйлд "Манай менежер танд тусална 🙏" гэж хариул
 
 🛍️ БҮТЭЭГДЭХҮҮН:
 Нэр: Fresh Juice Mini Portable Blender
 💰 Үнэ: 79,900₮ (анхны үнэ 120,000₮-с 33% хямдарсан!)
-📦 Багтаамж: 350мл
-🎨 Өнгө: Ягаан 🩷, Цагаан 🤍
-🔥 ЯАРАВЧИЛ: Зөвхөн 5 ширхэг үлдсэн!
-⭐ Үнэлгээ: 4.9/5
+📦 Багтаамж: 350мл | 🎨 Өнгө: Ягаан 🩷, Цагаан 🤍
+🔥 Зөвхөн 5 ширхэг үлдсэн! ⭐ 4.9/5 үнэлгээ
 
 ⚡ ОНЦЛОГ:
-- 30 секундэд шинэхэн жүүс, smoothie бэлдэнэ
-- USB цэнэглэлт — powerbank, утасны цэнэглэгчээс
-- Жижиг, хөнгөн — ажил, дасгал, аялалд тохиромжтой
-- Цэвэрлэхэд амархан — ус нэмж асаахад л болно
+- 30 секундэд шинэхэн жүүс, smoothie
+- USB цэнэглэлт — powerbank, утаснаас
+- Жижиг, хөнгөн — ажил, дасгал, аялалд
 
-💳 ЗАХИАЛГЫН АЛХАМ:
-1️⃣ Нэр, утас, хаяг, өнгө (Ягаан/Цагаан) хэлнэ
-2️⃣ 79,900₮-г доорх дансанд шилжүүлнэ:
-   🏦 Хаан банк: 5057496119
+💳 ЗАХИАЛГЫН АЛХАМ — данс асуувал ЗААВАЛ энийг хэл:
+1️⃣ Нэр, утас, хаяг, өнгө хэлнэ үү
+2️⃣ 79,900₮-г ХААН БАНК руу шилжүүлнэ:
+   👉 Дансны дугаар: 5057496119
    (QPay / SocialPay / MonPay-р ч болно)
 3️⃣ Гүйлгээний screenshot Messenger-т илгээнэ
 4️⃣ 24 цагт хүргэлт зохицуулна
 
 ⭐ СЭТГЭГДЭЛ:
-- Болормаа: "Маш хурдан ирсэн, чанар гайхалтай. Өглөө бүр smoothie хийж байна!"
+- Болормаа: "Маш хурдан ирсэн, өглөө бүр smoothie хийж байна!"
 - Энхбаяр: "Жижигхэн ч гэсэн маш хүчтэй!"
-- Ундрах: "Загвар нь маш сайхан, бүх зүйл сайн."
 
-💡 UPSELL (заавал дагах):
-- Ягаан авна гэвэл → "Цагаан өнгө ч бий, хоёуланг харьцуулж үзэх үү? 😊"
-- Нэг авна гэвэл → "Найздаа бэлэг болгоод 2 авбал хэрхэн вэ?"
-- Үнэ асуувал → "120,000₮-с 79,900₮ болсон — 33% хэмнэлт! 🔥"
+💡 UPSELL:
+- Ягаан авна → "Цагаан өнгө ч бий 😊"
+- Нэг авна → "Найздаа бэлэг болгоод 2 авбал?"
+- Үнэ асуувал → "120,000₮-с 79,900₮ — 33% хэмнэлт! 🔥" """
 
-📌 ДҮРЭМ:
-- Зөвхөн МОНГОЛ хэлээр хариул
-- 3-4 өгүүлбэрээс хэтрэхгүй, товч байх
-- Анхны мессежид заавал нэрээр нь мэндлэх
-- Мэдэхгүй зүйлд "Манай менежер танд тусална 🙏" гэж хариул"""
+                # Яриа түүхэд хэрэглэгчийн мессеж нэмэх
+                history.append({"role": "user", "content": user_text})
+
+                # AI-д илгээх мессежийн жагсаалт
+                messages = [{"role": "system", "content": system_prompt}] + history[-MAX_HISTORY:]
 
                 response = groq_client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_text}
-                    ],
+                    messages=messages,
                     max_tokens=300,
                 )
                 reply = response.choices[0].message.content
                 print(f">>> AI хариу: {reply}")
 
-                # Мессеж илгээх
+                # Яриа түүхэд AI хариу нэмэх
+                history.append({"role": "assistant", "content": reply})
+
+                # Хамгийн сүүлийн MAX_HISTORY мессежийг л хадгална
+                conversation_history[sender_id] = history[-MAX_HISTORY:]
+
                 send_message(sender_id, reply)
 
-                # Зураг хүссэн бол landing page URL ч илгээх
                 if wants_image:
                     send_url_button(
                         sender_id,
