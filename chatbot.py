@@ -114,12 +114,11 @@ def webhook():
                 if wants_payment:
                     print(">>> [PAYMENT TRIGGER] Захиалгын мэдээлэл илгээж байна")
                     send_message(sender_id, PAYMENT_REPLY)
-                    if wants_image:
-                        send_url_button(
-                            sender_id,
-                            "👇 Бүтээгдэхүүний зураг болон дэлгэрэнгүй мэдээлэл:",
-                            LANDING_PAGE_URL
-                        )
+                    send_url_button(
+                        sender_id,
+                        "👇 Бүтээгдэхүүний зураг, дэлгэрэнгүй мэдээлэл:",
+                        LANDING_PAGE_URL
+                    )
                     continue
 
                 # Бусад асуултад AI хариулна
@@ -172,7 +171,7 @@ Fresh Juice Mini Portable Blender
                 if wants_image:
                     send_url_button(
                         sender_id,
-                        "👇 Бүтээгдэхүүний зураг болон дэлгэрэнгүй мэдээлэл:",
+                        "👇 Бүтээгдэхүүний зураг, дэлгэрэнгүй мэдээлэл:",
                         LANDING_PAGE_URL
                     )
 
