@@ -101,20 +101,20 @@ def send_message(recipient_id, text):
 def save_payment_to_sheet(user_name, sender_id, image_url):
     """Төлбөрийн баримтыг Google Sheets-т хадгалах"""
     try:
+        import json
         from datetime import datetime
+        # Одоо байгаа script-тэй нийцэх формат — нэр/утас/хаяг/өнгө/огноо
         data = {
-            "төрөл": "Төлбөрийн баримт",
-            "нэр": user_name or sender_id,
-            "утас": "",
-            "хаяг": "",
-            "өнгө": "",
-            "зураг_url": image_url,
+            "нэр": user_name or "Messenger хэрэглэгч",
+            "утас": "📸 ТӨЛБӨРИЙН БАРИМТ",
+            "хаяг": image_url,          # зургийн URL → хаяг баганад
+            "өнгө": "Зураг илгээсэн",
             "огноо": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         requests.post(
             SHEET_URL,
             headers={"Content-Type": "text/plain"},
-            data=__import__('json').dumps(data, ensure_ascii=False),
+            data=json.dumps(data, ensure_ascii=False),
             timeout=10
         )
         print(f">>> [SHEET] Төлбөрийн баримт хадгаллаа: {user_name}")
